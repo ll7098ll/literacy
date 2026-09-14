@@ -1,0 +1,5 @@
+{
+  "name": "Remix: EBS-Style Literacy Exam Generator",
+  "description": "An AI-powered application that generates high-quality, inference-based literacy exams for middle school students in the style of EBS/CSAT, featuring subject selection and Word document export.",
+  "requestFramePermissions": []
+}

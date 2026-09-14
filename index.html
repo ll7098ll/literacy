@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>초등 문해력 스마트 코스웨어</title>
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800&family=Noto+Serif+KR:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['"Pretendard"', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'Roboto', 'sans-serif'],
+              serif: ['"Noto Serif KR"', 'serif'],
+            },
+            colors: {
+              brand: {
+                50: '#f0f5ff',
+                100: '#e0ebfe',
+                200: '#bad6fd',
+                300: '#7cb5fb',
+                400: '#3691f6',
+                500: '#1d74ea',
+                600: '#1e40af', // Deep Royal Navy
+                700: '#1d3596',
+                800: '#1a2c7a',
+                900: '#0f172a', // Deep Slate Ink
+              },
+              growth: {
+                50: '#ecfdf5',
+                100: '#d1fae5',
+                200: '#a7f3d0',
+                500: '#10b981',
+                600: '#059669',
+                700: '#047857',
+                800: '#065f46',
+              },
+              warmth: {
+                50: '#fffbeb',
+                100: '#fef3c7',
+                200: '#fde68a',
+                500: '#f59e0b',
+                600: '#d97706',
+                700: '#b45309',
+                800: '#92400e',
+              },
+              paper: {
+                warm: '#FAF8F5',
+                soft: '#F4EFEA',
+                edge: '#E8E1D5',
+                ink: '#1E293B',
+                highlight: '#FEF3C7',
+              },
+            },
+            boxShadow: {
+              'card': '0 1px 3px 0 rgba(15, 23, 42, 0.05), 0 1px 2px -1px rgba(15, 23, 42, 0.03)',
+              'card-hover': '0 10px 20px -4px rgba(15, 23, 42, 0.08), 0 4px 6px -2px rgba(15, 23, 42, 0.04)',
+              'subtle': '0 1px 2px 0 rgba(0, 0, 0, 0.04)',
+              'float': '0 16px 36px -4px rgba(15, 23, 42, 0.12), 0 4px 12px -2px rgba(15, 23, 42, 0.06)',
+              'tactile': '0 3px 0 0 #0F172A',
+              'tactile-sm': '0 2px 0 0 #0F172A',
+              'tactile-blue': '0 3px 0 0 #1E40AF',
+              'tactile-emerald': '0 3px 0 0 #065F46',
+              'tactile-amber': '0 3px 0 0 #B45309',
+              'tactile-pressed': '0 1px 0 0 #0F172A',
+            }
+          },
+        },
+      }
+    </script>
+    <style>
+      html {
+        scroll-behavior: smooth;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-rendering: optimizeLegibility;
+      }
+      body {
+        background-color: #f8fafc;
+        overflow-x: hidden;
+        word-break: keep-all;
+        overflow-wrap: break-word;
+      }
+      
+      /* Global text wrap & overflow protection */
+      p, h1, h2, h3, h4, h5, h6, span, div {
+        overflow-wrap: break-word;
+      }
+      
+      /* 3D Flip Card Styles */
+      .perspective-1000 {
+        perspective: 1000px;
+      }
+      .transform-style-3d {
+        transform-style: preserve-3d;
+      }
+      .backface-hidden {
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
+      }
+      .rotate-y-180 {
+        transform: rotateY(180deg);
+      }
+      
+      /* Tactile 3D Button & Card Action Styles */
+      .tactile-btn {
+        transition: transform 0.08s ease, box-shadow 0.08s ease;
+      }
+      .tactile-btn:active:not(:disabled) {
+        transform: translateY(2px) !important;
+        box-shadow: 0 1px 0 0 #0F172A !important;
+      }
+      .tactile-btn-blue:active:not(:disabled) {
+        transform: translateY(2px) !important;
+        box-shadow: 0 1px 0 0 #1E40AF !important;
+      }
+      .tactile-btn-emerald:active:not(:disabled) {
+        transform: translateY(2px) !important;
+        box-shadow: 0 1px 0 0 #065F46 !important;
+      }
+      .tactile-btn-amber:active:not(:disabled) {
+        transform: translateY(2px) !important;
+        box-shadow: 0 1px 0 0 #B45309 !important;
+      }
+
+      /* Editorial Book & Journal Reading Typography */
+      .editorial-serif {
+        font-family: 'Noto Serif KR', Georgia, Cambria, "Times New Roman", serif;
+        line-height: 1.85;
+        letter-spacing: -0.012em;
+      }
+      .editorial-para {
+        margin-bottom: 1.25rem;
+        text-align: justify;
+        word-break: keep-all;
+      }
+      .editorial-para:hover {
+        background-color: rgba(254, 243, 199, 0.45); /* Soft Amber Ink Highlighter */
+        border-radius: 0.375rem;
+      }
+
+      /* Clean Paper Texture */
+      .bg-paper-warm {
+        background-color: #FAF8F5;
+      }
+      .border-paper-edge {
+        border-color: #E8E1D5;
+      }
+
+      /* Scrollbar */
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #D4D4D8;
+        border-radius: 10px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #A1A1AA;
+      }
+      
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #D4D4D8;
+        border-radius: 10px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #A1A1AA;
+      }
+
+      @media print {
+        body { background: white; }
+        .no-print { display: none !important; }
+        .print-shadow-none { box-shadow: none !important; border: none !important; }
+        .break-inside-avoid { page-break-inside: avoid; }
+        .break-before-page { page-break-before: always; }
+      }
+
+      /* SVG Rendering Styles */
+      .markdown-body svg {
+        width: 100%;
+        max-width: 100%;
+        height: auto;
+        display: block;
+        margin: 1.5rem auto;
+        background-color: white;
+        border-radius: 0.75rem;
+        border: 1px solid #E4E4E7;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        padding: 1rem;
+      }
+
+      /* Inline Markdown Styles */
+      .inline-markdown {
+        display: inline;
+      }
+      .inline-markdown p {
+        display: inline;
+        margin: 0;
+      }
+      .inline-markdown svg {
+        width: 100%;
+        max-width: 400px;
+        height: auto;
+        display: block;
+        margin: 0.5rem auto;
+      }
+    </style>
+  </head>
+  <body class="text-slate-900 font-sans antialiased selection:bg-brand-500 selection:text-white bg-[#F8FAFC] min-h-screen">
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>

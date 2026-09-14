@@ -1,0 +1,233 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: userId (matches auth.uid)
+    // Fields:
+    //   - uid: string (required, immutable)
+    //   - role: string (required, 'teacher' or 'student')
+    //   - displayName: string (required)
+    //   - email: string (required)
+    //   - teacherCode: string (optional, required if student)
+    //   - createdAt: string (required, immutable)
+    //
+    // Collection: tests
+    // Document ID: testId
+    // Fields:
+    //   - id: string (required, immutable)
+    //   - teacherUid: string (required, immutable)
+    //   - title: string (required)
+    //   - testSet: string (required)
+    //   - createdAt: string (required, immutable)
+    //
+    // Collection: submissions
+    // Document ID: submissionId
+    // Fields:
+    //   - id: string (required, immutable)
+    //   - testId: string (required, immutable)
+    //   - studentUid: string (required, immutable)
+    //   - teacherUid: string (required, immutable)
+    //   - answers: string (required)
+    //   - score: number (required)
+    //   - submittedAt: string (required, immutable)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.uid;
+    }
+    
+    function uidUnchanged() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == request.auth.uid;
+    }
+    
+    function uidNotModified() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == resource.data.uid;
+    }
+    
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+    
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+    
+    function isValidDateString(dateStr) {
+      return dateStr is string && dateStr.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$");
+    }
+    
+    function getMyTeacherCode() {
+      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return userDoc != null ? userDoc.data.get('teacherCode', null) : null;
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+    
+    function isValidUser(data) {
+      return hasRequiredFields(['uid', 'displayName', 'email', 'createdAt']) &&
+             data.uid is string && data.uid.size() > 0 && data.uid.size() < 100 &&
+             (!('role' in data) || data.role == null || data.role in ['teacher', 'student']) &&
+             data.displayName is string && data.displayName.size() > 0 && data.displayName.size() < 100 &&
+             isValidEmail(data.email) &&
+             isValidDateString(data.createdAt) &&
+             (!('teacherCode' in data) || (data.teacherCode is string && data.teacherCode.size() < 100)) &&
+             (!('classCode' in data) || (data.classCode is string && data.classCode.size() < 100)) &&
+             (!('feedback' in data) || (data.feedback is string && data.feedback.size() < 10000));
+    }
+    
+    function isValidTest(data) {
+      return hasRequiredFields(['id', 'teacherUid', 'title', 'testSet', 'createdAt']) &&
+             data.id is string && data.id.size() > 0 && data.id.size() < 100 &&
+             data.teacherUid is string && data.teacherUid.size() > 0 && data.teacherUid.size() < 100 &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.testSet is string && data.testSet.size() < 1000000 && // 1MB limit
+             isValidDateString(data.createdAt) &&
+             (!('studentUid' in data) || (data.studentUid is string && data.studentUid.size() < 100)) &&
+             (!('isDaily' in data) || (data.isDaily is bool));
+    }
+
+    function isValidSubmission(data) {
+      return hasRequiredFields(['id', 'testId', 'studentUid', 'teacherUid', 'answers', 'score', 'stats', 'submittedAt']) &&
+             data.id is string && data.id.size() > 0 && data.id.size() < 100 &&
+             data.testId is string && data.testId.size() > 0 && data.testId.size() < 100 &&
+             data.studentUid is string && data.studentUid.size() > 0 && data.studentUid.size() < 100 &&
+             data.teacherUid is string && data.teacherUid.size() > 0 && data.teacherUid.size() < 100 &&
+             data.answers is string && data.answers.size() < 100000 && // 100KB limit
+             data.score is number && data.score >= 0 && data.score <= 100 &&
+             data.stats is string && data.stats.size() < 100000 && // 100KB limit
+             isValidDateString(data.submittedAt) &&
+             (!('mode' in data) || (data.mode is string && data.mode.size() < 50)) &&
+             (!('strategiesChecked' in data) || (data.strategiesChecked is string && data.strategiesChecked.size() < 100000)) &&
+             (!('readingHabitFeedback' in data) || data.readingHabitFeedback == null || (data.readingHabitFeedback is string && data.readingHabitFeedback.size() < 100000));
+    }
+
+    function isValidAssignment(data) {
+      return hasRequiredFields(['id', 'title', 'assignedDate', 'testSetIds', 'teacherUid', 'createdAt']) &&
+             data.id is string && data.id.size() > 0 && data.id.size() < 100 &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.assignedDate is string && data.assignedDate.size() > 0 && data.assignedDate.size() < 50 &&
+             data.testSetIds is list &&
+             data.teacherUid is string && data.teacherUid.size() > 0 && data.teacherUid.size() < 100 &&
+             data.teacherUid == request.auth.uid &&
+             isValidDateString(data.createdAt);
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      // Users can read their own profile.
+      // Teachers can read profiles of students who have their teacherCode.
+      allow read: if isOwner(userId) || 
+                     (resource != null && resource.data.teacherCode == request.auth.uid);
+      
+      allow create: if isOwner(userId) && 
+                       isValidUser(request.resource.data) && 
+                       uidUnchanged();
+                       
+      // User can update their own profile; Teachers can update feedback for their students
+      allow update: if (isOwner(userId) && isValidUser(request.resource.data) && uidNotModified()) ||
+                       (isAuthenticated() && resource != null && resource.data.teacherCode == request.auth.uid);
+                       
+      allow delete: if false; // No deletion for now
+      
+      match /vocabulary/{wordId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    match /tests/{testId} {
+      // Teachers can read their own tests.
+      // Students can read tests created by their teacher, or their own daily tests.
+      allow read: if isAuthenticated() && 
+                     (resource.data.teacherUid == request.auth.uid || 
+                      resource.data.teacherUid == getMyTeacherCode() ||
+                      (resource.data.teacherUid == 'system' && resource.data.studentUid == request.auth.uid));
+                      
+      allow create: if isAuthenticated() && 
+                       isValidTest(request.resource.data) &&
+                       (request.resource.data.teacherUid == request.auth.uid || 
+                        ((request.resource.data.teacherUid == 'system' || request.resource.data.teacherUid == getMyTeacherCode()) && request.resource.data.studentUid == request.auth.uid && request.resource.data.isDaily == true));
+                       
+      allow update: if isAuthenticated() && 
+                       (resource.data.teacherUid == request.auth.uid || 
+                        ((resource.data.teacherUid == 'system' || resource.data.teacherUid == getMyTeacherCode()) && resource.data.studentUid == request.auth.uid)) &&
+                       isValidTest(request.resource.data) &&
+                       request.resource.data.id == resource.data.id &&
+                       request.resource.data.teacherUid == resource.data.teacherUid &&
+                       (!('studentUid' in resource.data) || request.resource.data.studentUid == resource.data.studentUid) &&
+                       request.resource.data.createdAt == resource.data.createdAt;
+                       
+      allow delete: if isAuthenticated() && 
+                       (resource.data.teacherUid == request.auth.uid || 
+                        ((resource.data.teacherUid == 'system' || resource.data.teacherUid == getMyTeacherCode()) && resource.data.studentUid == request.auth.uid));
+    }
+
+    match /submissions/{submissionId} {
+      // Students can read their own submissions.
+      // Teachers can read submissions for their tests.
+      allow read: if isAuthenticated() && 
+                     (resource.data.studentUid == request.auth.uid || 
+                      resource.data.teacherUid == request.auth.uid);
+                      
+      allow create: if isAuthenticated() && 
+                       isValidSubmission(request.resource.data) &&
+                       request.resource.data.studentUid == request.auth.uid;
+                       
+      allow update: if false; // Submissions are immutable once created
+      
+      allow delete: if false; // Submissions cannot be deleted
+    }
+
+    match /assignments/{assignmentId} {
+      // Teachers can read/write their own assignments.
+      // Students can read assignments created by their teacher.
+      allow read: if isAuthenticated() && 
+                     (resource.data.teacherUid == request.auth.uid || 
+                      resource.data.teacherUid == getMyTeacherCode());
+                      
+      allow create: if isAuthenticated() && 
+                       isValidAssignment(request.resource.data) &&
+                       request.resource.data.teacherUid == request.auth.uid;
+                       
+      allow update: if isAuthenticated() && 
+                       resource.data.teacherUid == request.auth.uid &&
+                       isValidAssignment(request.resource.data) &&
+                       request.resource.data.id == resource.data.id &&
+                       request.resource.data.teacherUid == resource.data.teacherUid &&
+                       request.resource.data.createdAt == resource.data.createdAt;
+                       
+      allow delete: if isAuthenticated() && 
+                       resource.data.teacherUid == request.auth.uid;
+    }
+
+    match /classCodes/{code} {
+      // Students lookup teacherUid during sign-up
+      allow read: if isAuthenticated();
+      // Teachers can create and manage their own code mappings
+      allow create: if isAuthenticated() && request.resource.data.teacherUid == request.auth.uid;
+      allow update, delete: if isAuthenticated() && resource.data.teacherUid == request.auth.uid;
+    }
+  }
+}
